@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — TPMD dr. Nofi Liza Meliana{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+<!-- Selamat Datang -->
+<div class="bg-gradient-to-r from-blue-600 to-cyan-500 rounded-2xl p-6 text-white mb-6 shadow">
+    <div class="flex items-center justify-between flex-wrap gap-4">
+        <div>
+            <h2 class="text-xl font-bold">Selamat Datang! 👋</h2>
+            <p class="text-blue-100 text-sm mt-1">Tempat Praktik Mandiri Dokter (TPMD) dr. Nofi Liza Meliana</p>
+            <p class="text-blue-200 text-xs mt-0.5">Sistem Informasi Pendaftaran Pasien</p>
+        </div>
+        <div class="text-right">
+            <p class="text-blue-100 text-sm">Login sebagai</p>
+            <p class="font-semibold text-lg" id="namaUser">—</p>
+            <span id="roleUser" class="text-xs bg-white/20 px-2 py-0.5 rounded-full">—</span>
+        </div>
+    </div>
+</div>
+
+<!-- Stat Cards -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-100 flex items-center gap-4">
+        <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
+            <i class="fas fa-users text-blue-600 text-xl"></i>
+        </div>
+        <div>
+            <p class="text-xs text-gray-400 font-medium">Total Pasien</p>
+            <p class="text-2xl font-bold text-gray-800" id="statTotalPasien">—</p>
+        </div>
+    </div>
+    <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-100 flex items-center gap-4">
+        <div class="w-12 h-12 bg-cyan-100 rounded-xl flex items-center justify-center flex-shrink-0">
+            <i class="fas fa-calendar-day text-cyan-600 text-xl"></i>
+        </div>
+        <div>
+            <p class="text-xs text-gray-400 font-medium">Kunjungan Hari Ini</p>
+            <p class="text-2xl font-bold text-gray-800" id="statKunjunganHariIni">—</p>
+        </div>
+    </div>
+    <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-100 flex items-center gap-4">
+        <div class="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center flex-shrink-0">
+            <i class="fas fa-clock text-yellow-600 text-xl"></i>
+        </div>
+        <div>
+            <p class="text-xs text-gray-400 font-medium">Antrian Menunggu</p>
+            <p class="text-2xl font-bold text-gray-800" id="statMenunggu">—</p>
+        </div>
+    </div>
+    <div class="bg-white rounded-xl p-5 shadow-sm border border-gray-100 flex items-center gap-4">
+        <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0">
+            <i class="fas fa-check-circle text-green-600 text-xl"></i>
+        </div>
+        <div>
+            <p class="text-xs text-gray-400 font-medium">Selesai Hari Ini</p>
+            <p class="text-2xl font-bold text-gray-800" id="statSelesai">—</p>
+        </div>
+    </div>
+</div>
+
+<!-- Kunjungan Hari Ini -->
+<div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+    <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+        <div class="flex items-center gap-2">
+            <i class="fas fa-calendar-check text-blue-500"></i>
+            <h3 class="font-semibold text-gray-700">Kunjungan Hari Ini</h3>
+        </div>
+        <a href="/kunjungan" class="text-sm text-blue-600 hover:underline">Lihat semua →</a>
+    </div>
+    <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="bg-gray-50 text-gray-500 text-xs uppercase">
+                    <th class="px-5 py-3 text-left">#</th>
+                    <th class="px-5 py-3 text-left">Nama Pasien</th>
+                    <th class="px-5 py-3 text-left">Keluhan</th>
+                    <th class="px-5 py-3 text-left">Waktu</th>
+                    <th class="px-5 py-3 text-left">Status</th>
+                </tr>
+            </thead>
+            <tbody id="tabelKunjungan" class="divide-y divide-gray-50">
+                <tr><td colspan="5" class="px-5 py-8 text-center text-gray-400">
+                    <i class="fas fa-spinner fa-spin mr-2"></i> Memuat data...
+                </td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Isi nama user di dashboard
+    if (user) {
+        document.getElementById('namaUser').textContent = user.nama_lengkap || user.username;
+        const r = user.role;
+        document.getElementById('roleUser').textContent = r.charAt(0).toUpperCase() + r.slice(1);
+    }
+
+    function formatWaktu(tgl_kunjungan) {
+        if (!tgl_kunjungan) return '—';
+        const str = String(tgl_kunjungan);
+        const match = str.match(/(\d{2}):(\d{2})/);
+        if (match) return match[0];
+        return str;
+    }
+
+    function badgeStatus(status) {
+        const map = {
+            menunggu:    'bg-yellow-100 text-yellow-700',
+            hadir:       'bg-green-100 text-green-700',
+            tidak_hadir: 'bg-red-100 text-red-600'
+        };
+        const label = {
+            menunggu:    'Menunggu',
+            hadir:       'Hadir',
+            tidak_hadir: 'Tidak Hadir'
+        };
+        const cls = map[status] || 'bg-gray-100 text-gray-600';
+        return `<span class="px-2 py-0.5 rounded-full text-xs font-medium ${cls}">${label[status] || status}</span>`;
+    }
+
+    async function loadDashboard() {
+        try {
+            const [resPasien, resKunjungan, resMenunggu] = await Promise.all([
+                apiFetch('/api/pasien'),
+                apiFetch('/api/kunjungan/hari-ini'),
+                apiFetch('/api/kunjungan/menunggu')
+            ]);
+
+            const pasien     = await resPasien.json();
+            const kunjungan  = await resKunjungan.json();
+            const menunggu   = await resMenunggu.json();
+
+            document.getElementById('statTotalPasien').textContent        = pasien.length;
+            document.getElementById('statKunjunganHariIni').textContent   = kunjungan.length;
+            document.getElementById('statMenunggu').textContent           = menunggu.length;
+            document.getElementById('statSelesai').textContent            = kunjungan.filter(k => k.status === 'hadir').length;
+
+            const tbody = document.getElementById('tabelKunjungan');
+            if (kunjungan.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="px-5 py-8 text-center text-gray-400">
+                    <i class="fas fa-inbox mr-2"></i> Belum ada kunjungan hari ini.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = kunjungan.map((k, i) => `
+                <tr class="hover:bg-gray-50 transition">
+                    <td class="px-5 py-3 text-gray-400">${i + 1}</td>
+                    <td class="px-5 py-3 font-medium text-gray-700">${k.nama_pasien}</td>
+                    <td class="px-5 py-3 text-gray-500">${k.keluhan || '—'}</td>
+                    <td class="px-5 py-3 text-gray-400 text-xs">${formatWaktu(k.tgl_kunjungan)}</td>
+                    <td class="px-5 py-3">${badgeStatus(k.status)}</td>
+                </tr>
+            `).join('');
+        } catch(e) {
+            console.error(e);
+        }
+    }
+
+    loadDashboard();
+</script>
+{% endblock %}

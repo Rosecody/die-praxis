@@ -1,0 +1,247 @@
+{% extends "base.html" %}
+{% block title %}Kelola User — TPMD dr. Nofi Liza Meliana{% endblock %}
+{% block page_title %}Kelola User{% endblock %}
+
+{% block content %}
+<!-- Guard: hanya admin -->
+<div id="accessDenied" class="hidden text-center py-16">
+    <i class="fas fa-lock text-4xl mb-3 block text-gray-300"></i>
+    <p class="font-medium text-gray-500">Akses Terbatas</p>
+    <p class="text-xs text-gray-400">Halaman ini hanya untuk Admin</p>
+</div>
+
+<div id="mainContent">
+    <div class="flex items-center justify-between mb-5">
+        <p class="text-sm text-gray-500">Kelola akun pengguna sistem</p>
+        <button onclick="openModalTambah()"
+            class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition">
+            <i class="fas fa-user-plus"></i> Tambah User
+        </button>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead>
+                    <tr class="bg-gray-50 text-gray-500 text-xs uppercase border-b border-gray-100">
+                        <th class="px-4 py-3 text-left">#</th>
+                        <th class="px-4 py-3 text-left">Nama Lengkap</th>
+                        <th class="px-4 py-3 text-left">Username</th>
+                        <th class="px-4 py-3 text-left">Role</th>
+                        <th class="px-4 py-3 text-center">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody id="tabelUsers" class="divide-y divide-gray-50">
+                    <tr><td colspan="5" class="px-5 py-8 text-center text-gray-400">
+                        <i class="fas fa-spinner fa-spin mr-2"></i> Memuat data...
+                    </td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- ===== MODAL TAMBAH / EDIT USER ===== -->
+<div id="modalUser" class="fixed inset-0 z-50 hidden bg-black/40 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+            <h3 class="font-semibold text-gray-800" id="modalTitle">Tambah User</h3>
+            <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600 text-xl">&times;</button>
+        </div>
+        <form id="formUser" class="px-6 py-5 space-y-4">
+            <input type="hidden" id="userId"/>
+            <div>
+                <label class="block text-xs font-medium text-gray-500 mb-1">Nama Lengkap <span class="text-red-400">*</span></label>
+                <input type="text" id="fNama" placeholder="Nama lengkap pengguna" required
+                    class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"/>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-500 mb-1">Username <span class="text-red-400">*</span></label>
+                <input type="text" id="fUsername" placeholder="Username untuk login" required
+                    class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"/>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-500 mb-1">
+                    Password <span class="text-red-400" id="pwdRequired">*</span>
+                    <span id="pwdNote" class="hidden text-gray-400 font-normal">(kosongkan jika tidak diubah)</span>
+                </label>
+                <div class="relative">
+                    <input type="password" id="fPassword" placeholder="Password"
+                        class="w-full border border-gray-200 rounded-lg px-3 py-2 pr-9 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"/>
+                    <button type="button" onclick="togglePwd()" class="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-gray-600">
+                        <i id="eyeIcon" class="fas fa-eye text-sm"></i>
+                    </button>
+                </div>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-500 mb-1">Role <span class="text-red-400">*</span></label>
+                <select id="fRole" required class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+                    <option value="">— Pilih Role —</option>
+                    <option value="admin">Admin</option>
+                    <option value="dokter">Dokter</option>
+                    <option value="petugas">Petugas Pendaftaran</option>
+                </select>
+            </div>
+            <div class="flex justify-end gap-2 pt-2">
+                <button type="button" onclick="closeModal()"
+                    class="px-4 py-2 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50">Batal</button>
+                <button type="submit"
+                    class="px-4 py-2 text-sm text-white bg-blue-600 hover:bg-blue-700 rounded-lg flex items-center gap-2 transition">
+                    <i class="fas fa-save"></i> Simpan
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ===== MODAL KONFIRMASI HAPUS ===== -->
+<div id="modalHapus" class="fixed inset-0 z-50 hidden bg-black/40 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center">
+        <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
+            <i class="fas fa-trash text-red-500 text-xl"></i>
+        </div>
+        <h3 class="font-semibold text-gray-800 mb-1">Hapus User?</h3>
+        <p class="text-sm text-gray-500 mb-4">Akun <strong id="hapusNama"></strong> akan dihapus permanen.</p>
+        <div class="flex justify-center gap-3">
+            <button onclick="closeModalHapus()" class="px-4 py-2 text-sm border border-gray-200 rounded-lg hover:bg-gray-50">Batal</button>
+            <button onclick="konfirmasiHapus()" class="px-4 py-2 text-sm bg-red-500 hover:bg-red-600 text-white rounded-lg">Ya, Hapus</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let hapusId = null;
+
+    // Guard: hanya admin
+    if (!user || user.role !== 'admin') {
+        document.getElementById('mainContent').classList.add('hidden');
+        document.getElementById('accessDenied').classList.remove('hidden');
+    }
+
+    function roleBadge(role) {
+        const map = {
+            admin:    'bg-purple-100 text-purple-700',
+            dokter:   'bg-blue-100 text-blue-700',
+            petugas:  'bg-green-100 text-green-700'
+        };
+        const label = {
+            admin:   'Admin',
+            dokter:  'Dokter',
+            petugas: 'Petugas'
+        };
+        return `<span class="px-2 py-0.5 rounded-full text-xs font-medium ${map[role]||'bg-gray-100 text-gray-600'}">${label[role]||role}</span>`;
+    }
+
+    async function loadUsers() {
+        const res = await apiFetch('/api/users');
+        if (!res) return;
+        const data = await res.json();
+        const tbody = document.getElementById('tabelUsers');
+
+        if (data.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="5" class="px-5 py-8 text-center text-gray-400">Belum ada user.</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = data.map((u, i) => `
+            <tr class="hover:bg-gray-50 transition">
+                <td class="px-4 py-3 text-gray-400">${i + 1}</td>
+                <td class="px-4 py-3 font-medium text-gray-800">${u.nama_lengkap || '—'}</td>
+                <td class="px-4 py-3 text-gray-500">${u.username}</td>
+                <td class="px-4 py-3">${roleBadge(u.rolenya)}</td>
+                <td class="px-4 py-3 text-center">
+                    <div class="flex items-center justify-center gap-1">
+                        <button onclick="editUser(${u.id_user})" title="Edit"
+                            class="p-1.5 rounded-lg bg-yellow-50 hover:bg-yellow-100 text-yellow-600 transition">
+                            <i class="fas fa-pen text-xs"></i>
+                        </button>
+                        ${u.id_user !== user.id ? `
+                        <button onclick="hapusUser(${u.id_user}, '${u.nama_lengkap || u.username}')" title="Hapus"
+                            class="p-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-500 transition">
+                            <i class="fas fa-trash text-xs"></i>
+                        </button>` : '<span class="text-xs text-gray-300 px-2">Anda</span>'}
+                    </div>
+                </td>
+            </tr>`).join('');
+    }
+
+    function openModalTambah() {
+        document.getElementById('modalTitle').textContent = 'Tambah User Baru';
+        document.getElementById('userId').value = '';
+        document.getElementById('formUser').reset();
+        document.getElementById('pwdRequired').classList.remove('hidden');
+        document.getElementById('pwdNote').classList.add('hidden');
+        document.getElementById('fPassword').required = true;
+        document.getElementById('modalUser').classList.remove('hidden');
+    }
+
+    async function editUser(id) {
+        const res = await apiFetch(`/api/users/${id}`);
+        const u = await res.json();
+        document.getElementById('modalTitle').textContent = 'Edit User';
+        document.getElementById('userId').value    = u.id_user;
+        document.getElementById('fNama').value     = u.nama_lengkap || '';
+        document.getElementById('fUsername').value = u.username;
+        document.getElementById('fRole').value     = u.rolenya;
+        document.getElementById('fPassword').value = '';
+        document.getElementById('fPassword').required = false;
+        document.getElementById('pwdRequired').classList.add('hidden');
+        document.getElementById('pwdNote').classList.remove('hidden');
+        document.getElementById('modalUser').classList.remove('hidden');
+    }
+
+    function closeModal() { document.getElementById('modalUser').classList.add('hidden'); }
+
+    function hapusUser(id, nama) {
+        hapusId = id;
+        document.getElementById('hapusNama').textContent = nama;
+        document.getElementById('modalHapus').classList.remove('hidden');
+    }
+
+    function closeModalHapus() { document.getElementById('modalHapus').classList.add('hidden'); hapusId = null; }
+
+    async function konfirmasiHapus() {
+        if (!hapusId) return;
+        const res = await apiFetch(`/api/users/${hapusId}`, { method: 'DELETE' });
+        closeModalHapus();
+        if (res && res.ok) { showToast('User berhasil dihapus', 'success'); loadUsers(); }
+        else { const e = await res.json(); showToast(e.message || 'Gagal menghapus user', 'error'); }
+    }
+
+    function togglePwd() {
+        const p = document.getElementById('fPassword');
+        const i = document.getElementById('eyeIcon');
+        p.type = p.type === 'password' ? 'text' : 'password';
+        i.classList.toggle('fa-eye');
+        i.classList.toggle('fa-eye-slash');
+    }
+
+    document.getElementById('formUser').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const id = document.getElementById('userId').value;
+        const body = {
+            nama_lengkap: document.getElementById('fNama').value.trim(),
+            username:     document.getElementById('fUsername').value.trim(),
+            password:     document.getElementById('fPassword').value,
+            rolenya:      document.getElementById('fRole').value
+        };
+
+        const url    = id ? `/api/users/${id}` : '/api/users';
+        const method = id ? 'PUT' : 'POST';
+        const res = await apiFetch(url, { method, body: JSON.stringify(body) });
+        const hasil = await res.json();
+
+        if (res.ok) {
+            showToast(id ? 'User berhasil diperbarui' : 'User berhasil ditambahkan', 'success');
+            closeModal();
+            loadUsers();
+        } else {
+            showToast(hasil.message || 'Gagal menyimpan user', 'error');
+        }
+    });
+
+    if (user && user.role === 'admin') loadUsers();
+</script>
+{% endblock %}

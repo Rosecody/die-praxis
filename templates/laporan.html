@@ -1,0 +1,406 @@
+{% extends "base.html" %}
+{% block title %}Laporan — TPMD dr. Nofi Liza Meliana{% endblock %}
+{% block page_title %}Laporan Kunjungan Pasien{% endblock %}
+
+{% block content %}
+<!-- Filter Panel -->
+<div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-5 no-print" id="filterPanel">
+    <h3 class="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
+        <i class="fas fa-filter text-blue-500"></i> Filter Laporan
+    </h3>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div>
+            <label class="block text-xs font-medium text-gray-500 mb-1">Tanggal Dari</label>
+            <input type="date" id="fDari" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"/>
+        </div>
+        <div>
+            <label class="block text-xs font-medium text-gray-500 mb-1">Tanggal Sampai</label>
+            <input type="date" id="fSampai" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"/>
+        </div>
+        <div>
+            <label class="block text-xs font-medium text-gray-500 mb-1">Jenis Pasien</label>
+            <select id="fJenis" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+                <option value="">Semua</option>
+                <option value="bpjs">BPJS</option>
+                <option value="umum">Umum</option>
+            </select>
+        </div>
+        <div>
+            <label class="block text-xs font-medium text-gray-500 mb-1">Status Kunjungan</label>
+            <select id="fStatus" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+                <option value="">Semua</option>
+                <option value="hadir">Hadir</option>
+                <option value="menunggu">Menunggu</option>
+                <option value="tidak_hadir">Tidak Hadir</option>
+            </select>
+        </div>
+    </div>
+    <div class="flex flex-wrap gap-2 mt-4">
+        <button onclick="loadLaporan()" class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition">
+            <i class="fas fa-magnifying-glass"></i> Tampilkan
+        </button>
+        <button onclick="resetFilter()" class="flex items-center gap-2 border border-gray-200 text-gray-600 hover:bg-gray-50 text-sm px-4 py-2 rounded-lg transition">
+            <i class="fas fa-rotate-left"></i> Reset
+        </button>
+        <button onclick="cetakPDF()" id="btnPDF" class="hidden flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white text-sm font-semibold px-4 py-2 rounded-lg transition">
+            <i class="fas fa-file-pdf"></i> Cetak PDF
+        </button>
+        <button onclick="eksporExcel()" id="btnExcel" class="hidden flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition">
+            <i class="fas fa-file-excel"></i> Export Excel
+        </button>
+    </div>
+</div>
+
+<!-- Ringkasan -->
+<div id="ringkasan" class="hidden grid grid-cols-2 sm:grid-cols-4 gap-4 mb-5">
+    <div class="bg-white rounded-xl p-4 border border-gray-100 shadow-sm text-center">
+        <p class="text-xs text-gray-400">Total Kunjungan</p>
+        <p class="text-2xl font-bold text-blue-600" id="rTotal">0</p>
+    </div>
+    <div class="bg-white rounded-xl p-4 border border-gray-100 shadow-sm text-center">
+        <p class="text-xs text-gray-400">Hadir</p>
+        <p class="text-2xl font-bold text-green-600" id="rHadir">0</p>
+    </div>
+    <div class="bg-white rounded-xl p-4 border border-gray-100 shadow-sm text-center">
+        <p class="text-xs text-gray-400">Pasien BPJS</p>
+        <p class="text-2xl font-bold text-cyan-600" id="rBpjs">0</p>
+    </div>
+    <div class="bg-white rounded-xl p-4 border border-gray-100 shadow-sm text-center">
+        <p class="text-xs text-gray-400">Pasien Umum</p>
+        <p class="text-2xl font-bold text-gray-600" id="rUmum">0</p>
+    </div>
+</div>
+
+<!-- Tabel Laporan -->
+<div id="tabelContainer" style="display:none;" class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+
+    <!-- ===== KOP SURAT (hanya tampil saat print) ===== -->
+    <div id="kopSurat" class="hidden">
+        <div style="text-align:center; padding: 12px 20px 8px;">
+            <p style="font-size:13px; font-weight:bold; margin:0; text-transform:uppercase;">Tempat Praktik Mandiri Dokter (TPMD)</p>
+            <p style="font-size:14px; font-weight:bold; margin:2px 0;">dr. Nofi Liza Meliana</p>
+            <p style="font-size:11px; margin:2px 0;">RT.03 / RW.04, Desa Kendalsari, Kec. Petarukan, Kab. Pemalang, Jawa Tengah 52362</p>
+        </div>
+        <div style="border-top: 3px solid #000; margin: 0 20px;"></div>
+        <div style="text-align:center; padding: 6px 0 4px;">
+            <p style="font-size:12px; font-weight:bold; margin:0;">LAPORAN KUNJUNGAN PASIEN</p>
+            <p style="font-size:11px; margin:2px 0;" id="periodeKop"></p>
+        </div>
+    </div>
+
+    <div class="overflow-x-auto">
+        <table class="w-full text-sm" id="tabelLaporan">
+            <thead>
+                <tr class="bg-gray-50 text-gray-500 text-xs uppercase border-b border-gray-100">
+                    <th class="px-3 py-3 text-left">#</th>
+                    <th class="px-3 py-3 text-left">Tanggal</th>
+                    <th class="px-3 py-3 text-left">Nama Pasien</th>
+                    <th class="px-3 py-3 text-left">Jenis</th>
+                    <th class="px-3 py-3 text-left">Keluhan</th>
+                    <th class="px-3 py-3 text-left">Diagnosa</th>
+                    <th class="px-3 py-3 text-left">Resep</th>
+                    <th class="px-3 py-3 text-left">Status</th>
+                </tr>
+            </thead>
+            <tbody id="bodyLaporan" class="divide-y divide-gray-50"></tbody>
+        </table>
+    </div>
+    <div class="px-5 py-3 border-t border-gray-100 text-xs text-gray-400" id="infoLaporan"></div>
+
+    <!-- ===== BLOK TANDA TANGAN (hanya tampil saat print) ===== -->
+    <div id="blokTtd" class="hidden">
+        <div style="display:flex; justify-content:flex-end; padding: 20px 30px 10px;">
+            <div style="text-align:center; min-width:200px;">
+                <p style="font-size:11px; margin:0;" id="ttdTanggal"></p>
+                <p style="font-size:11px; margin:4px 0;">Mengetahui,</p>
+                <p style="font-size:11px; margin:0;">Dokter Penanggung Jawab</p>
+                <div style="height:55px;"></div>
+                <p style="font-size:11px; font-weight:bold; margin:0; border-top:1px solid #000; padding-top:3px;">( dr. Nofi Liza Meliana )</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="emptyState" class="hidden text-center py-16 text-gray-400">
+    <i class="fas fa-file-lines text-4xl mb-3 block text-gray-200"></i>
+    <p class="font-medium text-gray-500">Tidak ada data</p>
+    <p class="text-xs">Coba ubah filter pencarian</p>
+</div>
+
+<div id="initialState" class="text-center py-16 text-gray-400">
+    <i class="fas fa-filter text-4xl mb-3 block text-gray-200"></i>
+    <p class="font-medium text-gray-500">Silakan pilih filter dan klik Tampilkan</p>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!-- SheetJS untuk export Excel -->
+<script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
+
+<style>
+/* ===== TAMPILAN LAYAR: truncate teks panjang ===== */
+#tabelLaporan td.col-keluhan,
+#tabelLaporan td.col-diagnosa,
+#tabelLaporan td.col-resep {
+    max-width: 140px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ===== MEDIA PRINT ===== */
+@media print {
+    /* A4 Landscape, margin kecil */
+    @page {
+        size: A4 landscape;
+        margin: 10mm;
+    }
+
+    /* Sembunyikan elemen UI web */
+    #sidebar,
+    header,
+    footer,
+    .no-print,
+    #filterPanel,
+    #ringkasan,
+    #initialState,
+    #emptyState,
+    #infoLaporan,
+    #btnPDF,
+    #btnExcel { display: none !important; }
+
+    /* Reset layout sidebar */
+    .ml-64 { margin-left: 0 !important; }
+    body { background: #fff !important; }
+    main { padding: 0 !important; }
+
+    /* Tampilkan kop surat dan tanda tangan */
+    #kopSurat  { display: block !important; }
+    #blokTtd   { display: block !important; }
+
+    /* Container tabel tanpa shadow/border web */
+    #tabelContainer {
+        border: none !important;
+        box-shadow: none !important;
+        border-radius: 0 !important;
+        overflow: visible !important;
+    }
+
+    /* Tabel print: lebar penuh, border jelas */
+    #tabelLaporan {
+        width: 100% !important;
+        border-collapse: collapse !important;
+        font-size: 11px !important;
+    }
+
+    #tabelLaporan th,
+    #tabelLaporan td {
+        border: 1px solid #ccc !important;
+        padding: 4px 6px !important;
+        word-break: break-word !important;
+        white-space: normal !important;
+    }
+
+    #tabelLaporan thead tr {
+        background-color: #f3f4f6 !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    /* Reset truncate saat print */
+    #tabelLaporan td.col-keluhan,
+    #tabelLaporan td.col-diagnosa,
+    #tabelLaporan td.col-resep {
+        max-width: none !important;
+        overflow: visible !important;
+        white-space: normal !important;
+        text-overflow: unset !important;
+    }
+
+    /* Badge status: tampil teks saja */
+    #tabelLaporan span {
+        background: none !important;
+        color: #000 !important;
+        padding: 0 !important;
+        font-weight: bold;
+    }
+}
+</style>
+
+<script>
+    // Role guard — hanya admin dan dokter
+    if (user && user.role === 'petugas') {
+        window.location.href = '/dashboard';
+    }
+
+    let dataLaporan = [];
+
+    function getTodayStr() {
+        return new Date().toISOString().split('T')[0];
+    }
+
+    // Set default tanggal bulan ini
+    const now = new Date();
+    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+    document.getElementById('fDari').value   = firstDay;
+    document.getElementById('fSampai').value = getTodayStr();
+
+    function resetFilter() {
+        document.getElementById('fDari').value   = firstDay;
+        document.getElementById('fSampai').value = getTodayStr();
+        document.getElementById('fJenis').value  = '';
+        document.getElementById('fStatus').value = '';
+        document.getElementById('tabelContainer').style.display = 'none';
+        document.getElementById('ringkasan').classList.add('hidden');
+        document.getElementById('emptyState').classList.add('hidden');
+        document.getElementById('initialState').classList.remove('hidden');
+        document.getElementById('btnPDF').classList.add('hidden');
+        document.getElementById('btnExcel').classList.add('hidden');
+    }
+
+    function badgeStatus(s) {
+        const m = { menunggu:'bg-yellow-100 text-yellow-700', hadir:'bg-green-100 text-green-700', tidak_hadir:'bg-red-100 text-red-600' };
+        const l = { menunggu:'Menunggu', hadir:'Hadir', tidak_hadir:'Tidak Hadir' };
+        return `<span class="px-2 py-0.5 rounded-full text-xs font-medium ${m[s]||'bg-gray-100 text-gray-600'}">${l[s]||s}</span>`;
+    }
+
+    function formatTgl(str) {
+        if (!str) return '—';
+        const d = new Date(str);
+        return d.toLocaleDateString('id-ID', {day:'numeric', month:'short', year:'numeric'});
+    }
+
+    async function loadLaporan() {
+        const dari   = document.getElementById('fDari').value;
+        const sampai = document.getElementById('fSampai').value;
+        const jenis  = document.getElementById('fJenis').value;
+        const status = document.getElementById('fStatus').value;
+
+        let url = '/api/laporan/kunjungan?';
+        if (dari)   url += `tgl_dari=${dari}&`;
+        if (sampai) url += `tgl_sampai=${sampai}&`;
+        if (jenis)  url += `jenis_pasien=${jenis}&`;
+        if (status) url += `status=${status}&`;
+
+        document.getElementById('initialState').classList.add('hidden');
+        document.getElementById('emptyState').classList.add('hidden');
+
+        const res = await apiFetch(url);
+        if (!res) return;
+        const hasil = await res.json();
+        dataLaporan = hasil.data || [];
+
+        // Ringkasan
+        const total  = dataLaporan.length;
+        const hadir  = dataLaporan.filter(k => k.status === 'hadir').length;
+        const bpjs   = dataLaporan.filter(k => k.jenis_pasien === 'bpjs').length;
+        const umum   = dataLaporan.filter(k => k.jenis_pasien === 'umum').length;
+
+        document.getElementById('rTotal').textContent = total;
+        document.getElementById('rHadir').textContent = hadir;
+        document.getElementById('rBpjs').textContent  = bpjs;
+        document.getElementById('rUmum').textContent  = umum;
+
+        if (total === 0) {
+            document.getElementById('ringkasan').classList.add('hidden');
+            document.getElementById('tabelContainer').style.display = 'none';
+            document.getElementById('emptyState').classList.remove('hidden');
+            document.getElementById('btnPDF').classList.add('hidden');
+            document.getElementById('btnExcel').classList.add('hidden');
+            return;
+        }
+
+        document.getElementById('ringkasan').classList.remove('hidden');
+        document.getElementById('tabelContainer').style.display = 'block';
+        document.getElementById('btnPDF').classList.remove('hidden');
+        document.getElementById('btnExcel').classList.remove('hidden');
+
+        // Label periode
+        let periode = '';
+        if (dari && sampai) periode = `Periode: ${formatTgl(dari)} s.d. ${formatTgl(sampai)}`;
+        else if (dari) periode = `Dari: ${formatTgl(dari)}`;
+        document.getElementById('infoLaporan').textContent = `Total ${total} data kunjungan${periode ? ' · ' + periode : ''}`;
+
+        document.getElementById('bodyLaporan').innerHTML = dataLaporan.map((k, i) => `
+            <tr class="hover:bg-gray-50 transition">
+                <td class="px-3 py-2.5 text-gray-400">${i + 1}</td>
+                <td class="px-3 py-2.5 text-gray-600 text-xs whitespace-nowrap">${formatTgl(k.tgl_kunjungan)}</td>
+                <td class="px-3 py-2.5 font-medium text-gray-800">${k.nama_pasien}</td>
+                <td class="px-3 py-2.5">
+                    ${k.jenis_pasien === 'bpjs'
+                        ? '<span class="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs">BPJS</span>'
+                        : '<span class="px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full text-xs">Umum</span>'}
+                </td>
+                <td class="col-keluhan px-3 py-2.5 text-gray-500">${k.keluhan || '—'}</td>
+                <td class="col-diagnosa px-3 py-2.5 text-gray-500">${k.diagnosa || '—'}</td>
+                <td class="col-resep px-3 py-2.5 text-gray-500">${k.resep_obat || '—'}</td>
+                <td class="px-3 py-2.5">${badgeStatus(k.status)}</td>
+            </tr>`).join('');
+    }
+
+    // ===== CETAK PDF =====
+    function cetakPDF() {
+        const dari   = document.getElementById('fDari').value;
+        const sampai = document.getElementById('fSampai').value;
+
+        // Isi periode di kop surat
+        let periode = '';
+        if (dari && sampai) periode = `Periode: ${formatTgl(dari)} s.d. ${formatTgl(sampai)}`;
+        else if (dari) periode = `Dari: ${formatTgl(dari)}`;
+        document.getElementById('periodeKop').textContent = periode;
+
+        // Isi tanggal tanda tangan
+        const tglCetak = new Date().toLocaleDateString('id-ID', {
+            day: 'numeric', month: 'long', year: 'numeric'
+        });
+        document.getElementById('ttdTanggal').textContent = `Pemalang, ${tglCetak}`;
+
+        // Tampilkan elemen khusus cetak
+        document.getElementById('kopSurat').style.display  = 'block';
+        document.getElementById('blokTtd').style.display   = 'block';
+
+        window.print();
+
+        // Sembunyikan kembali setelah print
+        document.getElementById('kopSurat').style.display  = '';
+        document.getElementById('blokTtd').style.display   = '';
+    }
+
+    // ===== EXPORT EXCEL =====
+    function eksporExcel() {
+        if (dataLaporan.length === 0) { showToast('Tidak ada data untuk diekspor', 'error'); return; }
+
+        const dari   = document.getElementById('fDari').value || '';
+        const sampai = document.getElementById('fSampai').value || '';
+
+        const rows = dataLaporan.map((k, i) => ({
+            'No': i + 1,
+            'Tanggal': k.tgl_kunjungan ? k.tgl_kunjungan.split('T')[0] : '',
+            'Nama Pasien': k.nama_pasien,
+            'Jenis Pasien': k.jenis_pasien === 'bpjs' ? 'BPJS' : 'Umum',
+            'No. BPJS': k.no_bpjs || '',
+            'No. NIK': k.no_nik || '',
+            'Keluhan': k.keluhan || '',
+            'Diagnosa': k.diagnosa || '',
+            'Resep Obat': k.resep_obat || '',
+            'Tensi': k.tensi_darah || '',
+            'Suhu': k.suhu || '',
+            'BB (kg)': k.berat_badan || '',
+            'TB (cm)': k.tinggi_badan || '',
+            'Status': k.status
+        }));
+
+        const ws = XLSX.utils.json_to_sheet(rows);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Laporan Kunjungan');
+
+        // Auto width kolom
+        const colWidths = Object.keys(rows[0]).map(k => ({ wch: Math.max(k.length, 12) }));
+        ws['!cols'] = colWidths;
+
+        const namaFile = `Laporan_Kunjungan_${dari}_sd_${sampai}.xlsx`;
+        XLSX.writeFile(wb, namaFile);
+        showToast('File Excel berhasil diunduh', 'success');
+    }
+</script>
+{% endblock %}

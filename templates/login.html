@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login — TPMD dr. Nofi Liza Meliana</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-blue-50 to-cyan-100 flex items-center justify-center">
+
+    <div class="w-full max-w-md px-6">
+        <!-- Logo / Header -->
+        <div class="text-center mb-8">
+            <div class="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-2xl mb-4 shadow-lg">
+                <i class="fas fa-hospital-user text-white text-2xl"></i>
+            </div>
+            <h1 class="text-xl font-bold text-gray-800 leading-tight">Tempat Praktik Mandiri Dokter</h1>
+            <p class="text-blue-600 font-semibold text-lg">dr. Nofi Liza Meliana</p>
+            <p class="text-gray-500 text-sm mt-1">Sistem Informasi Pendaftaran Pasien</p>
+        </div>
+
+        <!-- Card Login -->
+        <div class="bg-white rounded-2xl shadow-xl p-8">
+            <h2 class="text-lg font-semibold text-gray-700 mb-6">Masuk ke Sistem</h2>
+
+            <!-- Alert Error -->
+            <div id="alertError" class="hidden mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-red-600 text-sm">
+                <i class="fas fa-circle-exclamation"></i>
+                <span id="alertMsg">Username atau password salah.</span>
+            </div>
+
+            <form id="formLogin" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-600 mb-1">Username</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-3 flex items-center text-gray-400">
+                            <i class="fas fa-user text-sm"></i>
+                        </span>
+                        <input type="text" id="username" placeholder="Masukkan username"
+                            class="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm transition"/>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-600 mb-1">Password</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-3 flex items-center text-gray-400">
+                            <i class="fas fa-lock text-sm"></i>
+                        </span>
+                        <input type="password" id="password" placeholder="Masukkan password"
+                            class="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm transition"/>
+                        <button type="button" onclick="togglePassword()" class="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-gray-600">
+                            <i id="eyeIcon" class="fas fa-eye text-sm"></i>
+                        </button>
+                    </div>
+                </div>
+                <button type="submit" id="btnLogin"
+                    class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-lg transition flex items-center justify-center gap-2 mt-2">
+                    <i class="fas fa-right-to-bracket"></i>
+                    <span>Masuk</span>
+                </button>
+            </form>
+        </div>
+
+        <p class="text-center text-gray-400 text-xs mt-6">&copy; 2025 TPMD dr. Nofi Liza Meliana. All rights reserved.</p>
+    </div>
+
+    <script>
+        const API = '';
+
+        function togglePassword() {
+            const pwd = document.getElementById('password');
+            const icon = document.getElementById('eyeIcon');
+            if (pwd.type === 'password') {
+                pwd.type = 'text';
+                icon.classList.replace('fa-eye', 'fa-eye-slash');
+            } else {
+                pwd.type = 'password';
+                icon.classList.replace('fa-eye-slash', 'fa-eye');
+            }
+        }
+
+        document.getElementById('formLogin').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btnLogin');
+            const alertEl = document.getElementById('alertError');
+            const alertMsg = document.getElementById('alertMsg');
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> <span>Memproses...</span>';
+            alertEl.classList.add('hidden');
+
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+
+            try {
+                const res = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                const data = await res.json();
+
+                if (res.ok) {
+                    localStorage.setItem('token', data.token);
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                    window.location.href = '/dashboard';
+                } else {
+                    alertMsg.textContent = data.message || 'Login gagal.';
+                    alertEl.classList.remove('hidden');
+                }
+            } catch (err) {
+                alertMsg.textContent = 'Tidak dapat terhubung ke server.';
+                alertEl.classList.remove('hidden');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-right-to-bracket"></i> <span>Masuk</span>';
+            }
+        });
+
+        // Redirect kalau sudah login
+        if (localStorage.getItem('token')) {
+            window.location.href = '/dashboard';
+        }
+    </script>
+</body>
+</html>

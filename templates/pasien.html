@@ -1,0 +1,428 @@
+{% extends "base.html" %}
+{% block title %}Data Pasien — TPMD dr. Nofi Liza Meliana{% endblock %}
+{% block page_title %}Data Pasien{% endblock %}
+
+{% block content %}
+<!-- Header Actions -->
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
+    <div class="relative w-full sm:w-72">
+        <span class="absolute inset-y-0 left-3 flex items-center text-gray-400 pointer-events-none">
+            <i class="fas fa-search text-sm"></i>
+        </span>
+        <input type="text" id="searchInput" placeholder="Cari nama pasien..."
+            class="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"/>
+    </div>
+    <button onclick="openModalTambah()" id="btnTambahPasien"
+        class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition">
+        <i class="fas fa-user-plus"></i> Tambah Pasien
+    </button>
+</div>
+
+<!-- Tabel Pasien -->
+<div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+            <thead>
+                <tr class="bg-gray-50 text-gray-500 text-xs uppercase border-b border-gray-100">
+                    <th class="px-4 py-3 text-left">#</th>
+                    <th class="px-4 py-3 text-left">Nama Pasien</th>
+                    <th class="px-4 py-3 text-left">Jenis</th>
+                    <th class="px-4 py-3 text-left">No. NIK</th>
+                    <th class="px-4 py-3 text-left">No. BPJS</th>
+                    <th class="px-4 py-3 text-left">Tgl. Lahir</th>
+                    <th class="px-4 py-3 text-left">Alamat</th>
+                    <th class="px-4 py-3 text-center">Aksi</th>
+                </tr>
+            </thead>
+            <tbody id="tabelPasien" class="divide-y divide-gray-50">
+                <tr><td colspan="8" class="px-5 py-8 text-center text-gray-400">
+                    <i class="fas fa-spinner fa-spin mr-2"></i> Memuat data...
+                </td></tr>
+            </tbody>
+        </table>
+    </div>
+    <div class="px-5 py-3 border-t border-gray-100 flex items-center justify-between flex-wrap gap-2">
+        <p class="text-xs text-gray-400" id="infoPasien"></p>
+        <!-- Pagination -->
+        <div id="paginasiContainer" class="flex items-center gap-1"></div>
+    </div>
+</div>
+
+<!-- ===== MODAL TAMBAH / EDIT PASIEN ===== -->
+<div id="modalPasien" class="fixed inset-0 z-50 hidden bg-black/40 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+            <h3 class="font-semibold text-gray-800" id="modalTitle">Tambah Pasien</h3>
+            <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+        </div>
+        <form id="formPasien" class="px-6 py-5 space-y-4">
+            <input type="hidden" id="pasienId"/>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div class="sm:col-span-2">
+                    <label class="block text-xs font-medium text-gray-500 mb-1">Nama Lengkap Pasien <span class="text-red-400">*</span></label>
+                    <input type="text" id="fNama" placeholder="Nama lengkap" required
+                        class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"/>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-500 mb-1">Jenis Pasien <span class="text-red-400">*</span></label>
+                    <select id="fJenis" required class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+                        <option value="">— Pilih —</option>
+                        <option value="bpjs">BPJS</option>
+                        <option value="umum">Umum</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-500 mb-1">Tanggal Lahir</label>
+                    <input type="date" id="fTglLahir"
+                        class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"/>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-500 mb-1">No. NIK</label>
+                    <input type="tel" id="fNik" placeholder="16 digit NIK" maxlength="16"
+                        inputmode="numeric" pattern="[0-9]*"
+                        class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
+                        oninput="this.value=this.value.replace(/[^0-9]/g,''); clearError('errNik')"/>
+                    <p id="errNik" class="hidden text-xs text-red-500 mt-1 flex items-center gap-1">
+                        <i class="fas fa-circle-exclamation"></i>
+                        <span>NIK harus berisi tepat 16 digit angka.</span>
+                    </p>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-500 mb-1">No. BPJS</label>
+                    <input type="tel" id="fBpjs" placeholder="13 digit (opsional)" maxlength="13"
+                        inputmode="numeric" pattern="[0-9]*"
+                        class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
+                        oninput="this.value=this.value.replace(/[^0-9]/g,''); clearError('errBpjs')"/>
+                    <p id="errBpjs" class="hidden text-xs text-red-500 mt-1 flex items-center gap-1">
+                        <i class="fas fa-circle-exclamation"></i>
+                        <span id="errBpjsMsg">No. BPJS harus berisi tepat 13 digit angka.</span>
+                    </p>
+                </div>
+                <div class="sm:col-span-2">
+                    <label class="block text-xs font-medium text-gray-500 mb-1">Alamat <span class="text-red-400">*</span></label>
+                    <textarea id="fAlamat" rows="2" placeholder="Alamat lengkap" required
+                        class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 resize-none"></textarea>
+                </div>
+            </div>
+            <div class="flex justify-end gap-2 pt-2">
+                <button type="button" onclick="closeModal()"
+                    class="px-4 py-2 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition">Batal</button>
+                <button type="submit" id="btnSimpan"
+                    class="px-4 py-2 text-sm text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition flex items-center gap-2">
+                    <i class="fas fa-save"></i> Simpan
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ===== MODAL DETAIL PASIEN ===== -->
+<div id="modalDetail" class="fixed inset-0 z-50 hidden bg-black/40 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+            <h3 class="font-semibold text-gray-800">Detail Pasien</h3>
+            <button onclick="closeModalDetail()" class="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+        </div>
+        <div id="detailContent" class="px-6 py-5 space-y-3 text-sm"></div>
+        <div class="px-6 pb-5 flex justify-end">
+            <button onclick="closeModalDetail()" class="px-4 py-2 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50">Tutup</button>
+        </div>
+    </div>
+</div>
+
+<!-- ===== MODAL KONFIRMASI HAPUS ===== -->
+<div id="modalHapus" class="fixed inset-0 z-50 hidden bg-black/40 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center">
+        <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
+            <i class="fas fa-trash text-red-500 text-xl"></i>
+        </div>
+        <h3 class="font-semibold text-gray-800 mb-1">Hapus Pasien?</h3>
+        <p class="text-sm text-gray-500 mb-4">Data pasien <strong id="hapusNama"></strong> akan dihapus permanen.</p>
+        <div class="flex justify-center gap-3">
+            <button onclick="closeModalHapus()" class="px-4 py-2 text-sm border border-gray-200 rounded-lg hover:bg-gray-50">Batal</button>
+            <button onclick="konfirmasiHapus()" class="px-4 py-2 text-sm bg-red-500 hover:bg-red-600 text-white rounded-lg transition">Ya, Hapus</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let allPasien = [];
+    let filteredPasien = [];
+    let hapusId = null;
+    let currentPage = 1;
+    const LIMIT = 10;
+
+    // ===== ROLE GUARD =====
+    if (user && user.role === 'dokter') {
+        document.getElementById('btnTambahPasien')?.remove();
+    }
+
+    // ===== LOAD DATA =====
+    async function loadPasien() {
+        const res = await apiFetch('/api/pasien');
+        if (!res) return;
+        allPasien = await res.json();
+        filteredPasien = [...allPasien];
+        currentPage = 1;
+        renderTabel();
+    }
+
+    function renderTabel() {
+        const tbody   = document.getElementById('tabelPasien');
+        const total   = filteredPasien.length;
+        const totalHal = Math.ceil(total / LIMIT);
+        const start   = (currentPage - 1) * LIMIT;
+        const end     = start + LIMIT;
+        const data    = filteredPasien.slice(start, end);
+
+        document.getElementById('infoPasien').textContent = total === 0
+            ? 'Tidak ada data'
+            : `Menampilkan ${start + 1}–${Math.min(end, total)} dari ${total} pasien`;
+
+        if (total === 0) {
+            tbody.innerHTML = `<tr><td colspan="8" class="px-5 py-8 text-center text-gray-400">
+                <i class="fas fa-inbox mr-2"></i> Belum ada data pasien.</td></tr>`;
+            renderPaginasi(0);
+            return;
+        }
+
+        tbody.innerHTML = data.map((p, i) => {
+            const canEdit   = user.role !== 'dokter';
+            const canDelete = user.role === 'admin';
+            const tgl = p.tgl_lahir ? new Date(p.tgl_lahir).toLocaleDateString('id-ID') : '—';
+            // DB menyimpan lowercase: 'bpjs' atau 'umum'
+            const jenisBadge = p.jenis_pasien === 'bpjs'
+                ? '<span class="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">BPJS</span>'
+                : '<span class="px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full text-xs font-medium">Umum</span>';
+            return `
+            <tr class="hover:bg-gray-50 transition">
+                <td class="px-4 py-3 text-gray-400">${start + i + 1}</td>
+                <td class="px-4 py-3 font-medium text-gray-800">${p.nama_pasien}</td>
+                <td class="px-4 py-3">${jenisBadge}</td>
+                <td class="px-4 py-3 text-gray-500">${p.no_nik || '—'}</td>
+                <td class="px-4 py-3 text-gray-500">${p.no_bpjs || '—'}</td>
+                <td class="px-4 py-3 text-gray-500">${tgl}</td>
+                <td class="px-4 py-3 text-gray-500 max-w-xs truncate">${p.alamat || '—'}</td>
+                <td class="px-4 py-3 text-center">
+                    <div class="flex items-center justify-center gap-1">
+                        <button onclick="lihatDetail(${p.id_pasien})" title="Detail"
+                            class="p-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-600 transition">
+                            <i class="fas fa-eye text-xs"></i>
+                        </button>
+                        ${canEdit ? `<button onclick="editPasien(${p.id_pasien})" title="Edit"
+                            class="p-1.5 rounded-lg bg-yellow-50 hover:bg-yellow-100 text-yellow-600 transition">
+                            <i class="fas fa-pen text-xs"></i>
+                        </button>` : ''}
+                        ${canDelete ? `<button onclick="hapusPasien(${p.id_pasien}, '${p.nama_pasien.replace(/'/g,"\\'")}' )" title="Hapus"
+                            class="p-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-500 transition">
+                            <i class="fas fa-trash text-xs"></i>
+                        </button>` : ''}
+                    </div>
+                </td>
+            </tr>`;
+        }).join('');
+
+        renderPaginasi(totalHal);
+    }
+
+    function renderPaginasi(totalHal) {
+        const c = document.getElementById('paginasiContainer');
+        if (totalHal <= 1) { c.innerHTML = ''; return; }
+        const btn = (hal, label, disabled, aktif) =>
+            `<button onclick="gantiHalaman(${hal})" ${disabled ? 'disabled' : ''}
+                class="px-3 py-1 rounded-lg text-xs font-medium transition ${aktif ? 'bg-blue-600 text-white' : disabled ? 'opacity-30 cursor-not-allowed border border-gray-200 text-gray-400' : 'border border-gray-200 text-gray-600 hover:bg-gray-50'}">
+                ${label}
+            </button>`;
+
+        let html = btn(currentPage - 1, '<i class="fas fa-chevron-left text-xs"></i>', currentPage === 1, false);
+        const delta = 2;
+        const range = [];
+        for (let i = Math.max(1, currentPage - delta); i <= Math.min(totalHal, currentPage + delta); i++) range.push(i);
+        if (range[0] > 1) {
+            html += btn(1, '1', false, false);
+            if (range[0] > 2) html += `<span class="px-1 text-gray-400 text-xs">…</span>`;
+        }
+        range.forEach(n => { html += btn(n, n, false, n === currentPage); });
+        if (range[range.length - 1] < totalHal) {
+            if (range[range.length - 1] < totalHal - 1) html += `<span class="px-1 text-gray-400 text-xs">…</span>`;
+            html += btn(totalHal, totalHal, false, false);
+        }
+        html += btn(currentPage + 1, '<i class="fas fa-chevron-right text-xs"></i>', currentPage === totalHal, false);
+        c.innerHTML = html;
+    }
+
+    function gantiHalaman(hal) {
+        const total = Math.ceil(filteredPasien.length / LIMIT);
+        if (hal < 1 || hal > total) return;
+        currentPage = hal;
+        renderTabel();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // ===== SEARCH =====
+    document.getElementById('searchInput').addEventListener('input', function() {
+        const q = this.value.toLowerCase();
+        filteredPasien = allPasien.filter(p => p.nama_pasien.toLowerCase().includes(q));
+        currentPage = 1;
+        renderTabel();
+    });
+
+    // ===== VALIDASI NIK & BPJS =====
+    function showFieldError(elId, inputEl, msg) {
+        const err = document.getElementById(elId);
+        if (msg) err.querySelector('span') && (err.querySelector('span').textContent = msg);
+        err.classList.remove('hidden');
+        inputEl.classList.add('border-red-400');
+        inputEl.classList.remove('border-gray-200');
+    }
+
+    function clearError(elId) {
+        const err = document.getElementById(elId);
+        if (!err) return;
+        err.classList.add('hidden');
+        const inputId = elId === 'errNik' ? 'fNik' : 'fBpjs';
+        const input = document.getElementById(inputId);
+        if (input) {
+            input.classList.remove('border-red-400');
+            input.classList.add('border-gray-200');
+        }
+    }
+
+    function validasiForm() {
+        let valid = true;
+        const nikEl  = document.getElementById('fNik');
+        const bpjsEl = document.getElementById('fBpjs');
+        const nik    = nikEl.value.trim();
+        const bpjs   = bpjsEl.value.trim();
+        const jenis  = document.getElementById('fJenis').value;
+
+        // NIK: jika diisi wajib tepat 16 digit
+        if (nik.length > 0 && nik.length !== 16) {
+            showFieldError('errNik', nikEl, 'NIK harus berisi tepat 16 digit angka.');
+            valid = false;
+        } else {
+            clearError('errNik');
+        }
+
+        // BPJS: wajib diisi & tepat 13 digit jika jenis = bpjs
+        if (jenis === 'bpjs' && bpjs.length === 0) {
+            showFieldError('errBpjs', bpjsEl, 'No. BPJS wajib diisi untuk pasien BPJS.');
+            valid = false;
+        } else if (bpjs.length > 0 && bpjs.length !== 13) {
+            showFieldError('errBpjs', bpjsEl, 'No. BPJS harus berisi tepat 13 digit angka.');
+            valid = false;
+        } else {
+            clearError('errBpjs');
+        }
+
+        return valid;
+    }
+
+    // Real-time clear error saat digit sudah memenuhi syarat
+    document.getElementById('fNik').addEventListener('input', function() {
+        if (this.value.length === 16 || this.value.length === 0) clearError('errNik');
+    });
+    document.getElementById('fBpjs').addEventListener('input', function() {
+        const jenis = document.getElementById('fJenis').value;
+        if (this.value.length === 13 || (this.value.length === 0 && jenis !== 'bpjs')) clearError('errBpjs');
+    });
+
+    // ===== MODAL TAMBAH =====
+    function openModalTambah() {
+        document.getElementById('modalTitle').textContent = 'Tambah Pasien Baru';
+        document.getElementById('pasienId').value = '';
+        document.getElementById('formPasien').reset();
+        clearError('errNik');
+        clearError('errBpjs');
+        document.getElementById('modalPasien').classList.remove('hidden');
+    }
+
+    function closeModal() {
+        document.getElementById('modalPasien').classList.add('hidden');
+        clearError('errNik');
+        clearError('errBpjs');
+    }
+    function closeModalDetail() { document.getElementById('modalDetail').classList.add('hidden'); }
+    function closeModalHapus() { document.getElementById('modalHapus').classList.add('hidden'); hapusId = null; }
+
+    // ===== DETAIL =====
+    async function lihatDetail(id) {
+        const res = await apiFetch(`/api/pasien/${id}`);
+        const p = await res.json();
+        const tgl = p.tgl_lahir ? new Date(p.tgl_lahir).toLocaleDateString('id-ID', {day:'numeric',month:'long',year:'numeric'}) : '—';
+        document.getElementById('detailContent').innerHTML = `
+            <div class="flex flex-col gap-2">
+                <div class="flex justify-between border-b pb-2"><span class="text-gray-400">Nama</span><span class="font-semibold text-gray-800">${p.nama_pasien}</span></div>
+                <div class="flex justify-between border-b pb-2"><span class="text-gray-400">Jenis Pasien</span><span>${p.jenis_pasien}</span></div>
+                <div class="flex justify-between border-b pb-2"><span class="text-gray-400">No. NIK</span><span>${p.no_nik || '—'}</span></div>
+                <div class="flex justify-between border-b pb-2"><span class="text-gray-400">No. BPJS</span><span>${p.no_bpjs || '—'}</span></div>
+                <div class="flex justify-between border-b pb-2"><span class="text-gray-400">Tgl. Lahir</span><span>${tgl}</span></div>
+                <div class="flex justify-between"><span class="text-gray-400">Alamat</span><span class="text-right">${p.alamat || '—'}</span></div>
+            </div>`;
+        document.getElementById('modalDetail').classList.remove('hidden');
+    }
+
+    // ===== EDIT =====
+    async function editPasien(id) {
+        const res = await apiFetch(`/api/pasien/${id}`);
+        const p = await res.json();
+        document.getElementById('modalTitle').textContent = 'Edit Data Pasien';
+        document.getElementById('pasienId').value = p.id_pasien;
+        document.getElementById('fNama').value    = p.nama_pasien;
+        document.getElementById('fJenis').value   = p.jenis_pasien;
+        document.getElementById('fNik').value     = p.no_nik || '';
+        document.getElementById('fBpjs').value    = p.no_bpjs || '';
+        document.getElementById('fAlamat').value  = p.alamat;
+        document.getElementById('fTglLahir').value = p.tgl_lahir ? p.tgl_lahir.split('T')[0] : '';
+        document.getElementById('modalPasien').classList.remove('hidden');
+    }
+
+    // ===== HAPUS =====
+    function hapusPasien(id, nama) {
+        hapusId = id;
+        document.getElementById('hapusNama').textContent = nama;
+        document.getElementById('modalHapus').classList.remove('hidden');
+    }
+
+    async function konfirmasiHapus() {
+        if (!hapusId) return;
+        const res = await apiFetch(`/api/pasien/${hapusId}`, { method: 'DELETE' });
+        closeModalHapus();
+        if (res && res.ok) { showToast('Pasien berhasil dihapus', 'success'); loadPasien(); }
+        else { showToast('Gagal menghapus pasien', 'error'); }
+    }
+
+    // ===== SUBMIT FORM =====
+    document.getElementById('formPasien').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        // Validasi NIK dan BPJS sebelum submit
+        if (!validasiForm()) return;
+        const id = document.getElementById('pasienId').value;
+        const body = {
+            nama_pasien:   document.getElementById('fNama').value.trim(),
+            jenis_pasien:  document.getElementById('fJenis').value,
+            no_nik:        document.getElementById('fNik').value.trim() || null,
+            no_bpjs:       document.getElementById('fBpjs').value.trim() || null,
+            alamat:        document.getElementById('fAlamat').value.trim(),
+            tgl_lahir:     document.getElementById('fTglLahir').value || null
+        };
+
+        const url    = id ? `/api/pasien/${id}` : '/api/pasien';
+        const method = id ? 'PUT' : 'POST';
+        const res = await apiFetch(url, { method, body: JSON.stringify(body) });
+
+        if (res && res.ok) {
+            showToast(id ? 'Data pasien diperbarui' : 'Pasien berhasil ditambahkan', 'success');
+            closeModal();
+            loadPasien();
+        } else {
+            const err = await res.json();
+            showToast(err.message || 'Gagal menyimpan data', 'error');
+        }
+    });
+
+    loadPasien();
+</script>
+{% endblock %}

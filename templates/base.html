@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}TPMD dr. Nofi Liza Meliana{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+    <style>
+        .sidebar-link.active { background-color: #1d4ed8; color: #fff; }
+        .sidebar-link:hover:not(.active) { background-color: #1e40af20; }
+    </style>
+</head>
+<body class="bg-gray-50 font-sans">
+
+    <!-- Sidebar -->
+    <aside id="sidebar" class="fixed top-0 left-0 h-full w-64 bg-blue-800 text-white flex flex-col z-40 transition-transform duration-300">
+        <!-- Brand -->
+        <div class="p-5 border-b border-blue-700">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 bg-white rounded-lg flex items-center justify-center flex-shrink-0">
+                    <i class="fas fa-hospital-user text-blue-700 text-lg"></i>
+                </div>
+                <div class="leading-tight">
+                    <p class="text-xs text-blue-200">Sistem Pendaftaran</p>
+                    <p class="text-sm font-bold leading-tight">TPMD dr. Nofi</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- User info -->
+        <div class="px-5 py-3 border-b border-blue-700 bg-blue-900/40">
+            <p class="text-xs text-blue-300">Halo,</p>
+            <p class="font-semibold text-sm" id="sidebarNama">—</p>
+            <span id="sidebarBadge" class="inline-block mt-1 text-xs bg-blue-600 px-2 py-0.5 rounded-full">—</span>
+        </div>
+
+        <!-- Nav -->
+        <nav class="flex-1 p-3 space-y-1 overflow-y-auto">
+            <a href="/dashboard" class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition" id="navDashboard">
+                <i class="fas fa-gauge-high w-4 text-center"></i> Dashboard
+            </a>
+            <a href="/pasien" class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition" id="navPasien">
+                <i class="fas fa-users w-4 text-center"></i> Data Pasien
+            </a>
+            <a href="/kunjungan" class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition" id="navKunjungan">
+                <i class="fas fa-calendar-check w-4 text-center"></i> Kunjungan
+            </a>
+            <!-- Antrian Dokter: hanya muncul untuk dokter dan admin -->
+            <a href="/antrian" class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition" id="navAntrian">
+                <i class="fas fa-list-ol w-4 text-center"></i> Antrian Dokter
+            </a>
+            <!-- Laporan: dokter dan admin -->
+            <a href="/laporan" class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition" id="navLaporan">
+                <i class="fas fa-file-lines w-4 text-center"></i> Laporan
+            </a>
+            <!-- Kelola User: hanya admin -->
+            <a href="/users" class="sidebar-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition" id="navUsers">
+                <i class="fas fa-user-gear w-4 text-center"></i> Kelola User
+            </a>
+        </nav>
+
+        <!-- Logout -->
+        <div class="p-3 border-t border-blue-700">
+            <button onclick="logout()" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-blue-200 hover:bg-red-600 hover:text-white transition">
+                <i class="fas fa-right-from-bracket w-4 text-center"></i> Keluar
+            </button>
+        </div>
+    </aside>
+
+    <!-- Main wrapper -->
+    <div class="ml-64 min-h-screen flex flex-col">
+        <!-- Topbar -->
+        <header class="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between sticky top-0 z-30">
+            <div>
+                <h1 class="text-base font-semibold text-gray-800">{% block page_title %}Dashboard{% endblock %}</h1>
+                <p class="text-xs text-gray-400">Tempat Praktik Mandiri Dokter (TPMD) dr. Nofi Liza Meliana</p>
+            </div>
+            <div class="flex items-center gap-2 text-sm text-gray-500">
+                <i class="fas fa-clock text-blue-500"></i>
+                <span id="jamSekarang">—</span>
+            </div>
+        </header>
+
+        <!-- Content -->
+        <main class="flex-1 p-6">
+            {% block content %}{% endblock %}
+        </main>
+
+        <footer class="text-center text-xs text-gray-400 py-3 border-t border-gray-100">
+            &copy; 2025 TPMD dr. Nofi Liza Meliana — Sistem Informasi Pendaftaran Pasien
+        </footer>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-5 right-5 z-50 hidden">
+        <div id="toastInner" class="flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg text-sm text-white min-w-64">
+            <i id="toastIcon" class="fas fa-check-circle text-lg"></i>
+            <span id="toastMsg">Berhasil</span>
+        </div>
+    </div>
+
+    <script>
+        // ===== AUTH GUARD =====
+        const token = localStorage.getItem('token');
+        const user = JSON.parse(localStorage.getItem('user') || 'null');
+        if (!token || !user) { window.location.href = '/'; }
+
+        // ===== SIDEBAR USER INFO =====
+        if (user) {
+            document.getElementById('sidebarNama').textContent = user.nama_lengkap || user.username;
+            const badge = document.getElementById('sidebarBadge');
+            badge.textContent = user.role.charAt(0).toUpperCase() + user.role.slice(1);
+        }
+
+        // ===== ACTIVE NAV =====
+        const path = window.location.pathname;
+        const navMap = {
+            '/dashboard': 'navDashboard',
+            '/pasien': 'navPasien',
+            '/kunjungan': 'navKunjungan',
+            '/antrian': 'navAntrian',
+            '/laporan': 'navLaporan',
+            '/users': 'navUsers'
+        };
+        Object.entries(navMap).forEach(([p, id]) => {
+            if (path.startsWith(p)) document.getElementById(id)?.classList.add('active');
+        });
+
+        // ===== SEMBUNYIKAN MENU SESUAI ROLE =====
+        if (user && user.role === 'petugas') {
+            document.getElementById('navAntrian')?.remove();
+            document.getElementById('navLaporan')?.remove();
+            document.getElementById('navUsers')?.remove();
+        }
+        if (user && user.role === 'dokter') {
+            document.getElementById('navUsers')?.remove();
+        }
+
+        // ===== JAM =====
+        function updateJam() {
+            const now = new Date();
+            document.getElementById('jamSekarang').textContent = now.toLocaleString('id-ID', {
+                weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+                hour: '2-digit', minute: '2-digit'
+            });
+        }
+        updateJam();
+        setInterval(updateJam, 1000);
+
+        // ===== LOGOUT =====
+        function logout() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            window.location.href = '/';
+        }
+
+        // ===== API HELPER =====
+        async function apiFetch(url, options = {}) {
+            const headers = { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token, ...options.headers };
+            const res = await fetch(url, { ...options, headers });
+            if (res.status === 401) { logout(); return null; }
+            return res;
+        }
+
+        // ===== TOAST =====
+        function showToast(msg, type = 'success') {
+            const toast = document.getElementById('toast');
+            const inner = document.getElementById('toastInner');
+            const icon = document.getElementById('toastIcon');
+            const msgEl = document.getElementById('toastMsg');
+
+            const styles = {
+                success: { bg: 'bg-green-600', icon: 'fa-check-circle' },
+                error:   { bg: 'bg-red-500',   icon: 'fa-circle-exclamation' },
+                info:    { bg: 'bg-blue-500',  icon: 'fa-circle-info' }
+            };
+            const s = styles[type] || styles.success;
+            inner.className = `flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg text-sm text-white min-w-64 ${s.bg}`;
+            icon.className = `fas ${s.icon} text-lg`;
+            msgEl.textContent = msg;
+            toast.classList.remove('hidden');
+            setTimeout(() => toast.classList.add('hidden'), 3000);
+        }
+    </script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>
